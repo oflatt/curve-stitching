@@ -4,6 +4,7 @@
 (define WIDTH 500)
 (define HEIGHT 500)
 (define NUM-OF-LINES 130)
+(define DOTSPEED 100)
 (struct cloth (time surface))
 
 ;;returns the angle from the time and the function
@@ -50,9 +51,9 @@
    HEIGHT
    (if drawcircle?
        (overlay/xy
-        (circle 2 "outline" "red")
-        (- (- x) cropx)
-        (- (- y) cropy)
+        (circle 2 "solid" "red")
+        (- (- (+ x (* (* (/ WIDTH 3) (sin (/ t DOTSPEED))) (cos angle)))) cropx)
+        (- (- (+ y (* (* (sin (/ t DOTSPEED)) (/ WIDTH 3)) (sin angle)))) cropy)
         line-added)
        line-added)))
 
@@ -68,7 +69,7 @@
    (+ (/ WIDTH 2) (* (- (- (- (* 13 (cos t)) (* 5 (cos (* 2 t)))) (* 2 (cos (* 3 t))))) (/ WIDTH 50)))))
 
 (define (rose-formula time)
-  (define petal-factor 3)
+  (define petal-factor 7)
   (define t (* (/ time 50) pi))
   (list
    (+ (/ WIDTH 2) (* (* (cos (* petal-factor t)) (cos t)) (/ WIDTH 3)))
@@ -79,24 +80,30 @@
       s
       (draw-entire-helper (+ counter 1)
                           t
-                          (draw-line (+ counter t) s f #f)
+                          (if (= (modulo counter 5) 0)
+                              (draw-line (+ counter t) s f #t)
+                              (draw-line (+ counter t) s f #f))
                           f)))
 
 (define (draw-entire t f)
   (draw-entire-helper 0 t (rectangle WIDTH HEIGHT "outline" "black") f))
 
+(define speed-up 1)
+
 (define (tick c)
-  (define new-time (+ (cloth-time c) 0.5))
+  (define new-time (+ (cloth-time c) {* 0.01 speed-up}))
   (if (> NUM-OF-LINES (cloth-time c))
-      (if
-       (= (floor new-time) new-time)
-       (cloth
-        new-time
-        (draw-line new-time (cloth-surface c) rose-formula #f))
-       (cloth new-time (cloth-surface c)))
+      (cond
+       [(> (floor new-time) (floor (cloth-time c)))
+        (set! speed-up (+ speed-up 1))
+        (cloth
+         new-time
+         (draw-line new-time (cloth-surface c) heart-formula #f))]
+       [else
+        (cloth new-time (cloth-surface c))])
       (cloth
        (+ (cloth-time c) 0.01)
-       (draw-entire (+ 0.01 (- (cloth-time c) NUM-OF-LINES)) rose-formula))))
+       (draw-entire (+ 0.01 (- (cloth-time c) NUM-OF-LINES)) heart-formula))))
 
 (define (draw c)
   (cloth-surface c))
