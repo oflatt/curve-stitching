@@ -3,7 +3,6 @@
 
 (define WIDTH 500)
 (define HEIGHT 500)
-(define NUM-OF-LINES 130)
 (struct cloth (time surface))
 
 ;;returns the angle from the time and the function
@@ -42,7 +41,7 @@
        0]))
   (define line-added
     (add-line surface x1 y1 x2 y2
-              (pen (color (+ 150 (modulo (inexact->exact (floor t)) 106)) (+ 50 (modulo (inexact->exact (floor (/ t 3))) 106)) 50) 1 "solid" "butt" "round")))
+              (pen (color (+ 150 (modulo (+ 100 (inexact->exact (floor t))) 106)) 100 100) 1 "solid" "butt" "round")))
   (crop
    cropx
    cropy
@@ -61,23 +60,10 @@
    (+ (/ WIDTH 2) (* (cos (* (/ t 50) pi)) (/ WIDTH 3)))
    (+ (/ WIDTH 2) (* (sin (* (/ t 50) pi)) (/ WIDTH 3)))))
 
-(define (heart-formula time)
-  (define t (/ time 20))
-  (list
-   (+ (/ WIDTH 2) (* (* 16 (expt (sin t) 3)) (/ WIDTH 50)))
-   (+ (/ WIDTH 2) (* (- (- (- (* 13 (cos t)) (* 5 (cos (* 2 t)))) (* 2 (cos (* 3 t))))) (/ WIDTH 50)))))
-
-(define (rose-formula time)
-  (define petal-factor 3)
-  (define t (* (/ time 50) pi))
-  (list
-   (+ (/ WIDTH 2) (* (* (cos (* petal-factor t)) (cos t)) (/ WIDTH 3)))
-   (+ (/ WIDTH 2) (* (* (cos (* petal-factor t)) (sin t)) (/ WIDTH 3)))))
-
 (define (draw-entire-helper counter t s f)
-  (if (>= counter NUM-OF-LINES)
+  (if (>= counter 100)
       s
-      (draw-entire-helper (+ counter 1)
+      (draw-entire-helper (+ counter 2)
                           t
                           (draw-line (+ counter t) s f #f)
                           f)))
@@ -86,17 +72,13 @@
   (draw-entire-helper 0 t (rectangle WIDTH HEIGHT "outline" "black") f))
 
 (define (tick c)
-  (define new-time (+ (cloth-time c) 0.5))
-  (if (> NUM-OF-LINES (cloth-time c))
-      (if
-       (= (floor new-time) new-time)
-       (cloth
-        new-time
-        (draw-line new-time (cloth-surface c) rose-formula #f))
-       (cloth new-time (cloth-surface c)))
+  (if (> 100 (cloth-time c))
       (cloth
-       (+ (cloth-time c) 0.01)
-       (draw-entire (+ 0.01 (- (cloth-time c) NUM-OF-LINES)) rose-formula))))
+       (+ (cloth-time c) 2)
+       (draw-line (+ 2 (cloth-time c)) (cloth-surface c) circle-formula #f))
+      (cloth
+       (+ (cloth-time c) 0.1)
+       (draw-entire (+ 0.1 (cloth-time c)) circle-formula))))
 
 (define (draw c)
   (cloth-surface c))
