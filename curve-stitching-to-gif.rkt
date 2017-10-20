@@ -1,8 +1,39 @@
 #lang racket
-(require 2htdp/image 2htdp/universe)
+(require 2htdp/image 2htdp/universe
+         (only-in file/gif
+                  gif-start
+                  gif-end
+                  gif-add-image
+                  gif-add-loop-control
+                  gif-add-control
+                  quantize)
+         (only-in racket/gui/base put-file))
 
-(define WIDTH 1000)
-(define HEIGHT 1000)
+(define WIDTH 480)
+(define HEIGHT 480)
+
+(define filepath (put-file))
+
+(define (color->argblist c)
+  (list (color-alpha c) (color-red c) (color-green c) (color-blue c)))
+
+(define (image->quantizedbytes i)
+  (define colorlist (image->color-list i))
+  (define rgblist (apply append (map color->argblist colorlist)))
+  (quantize (list->bytes rgblist)))
+
+(define port (open-output-file filepath))
+
+(define gif (gif-start port WIDTH HEIGHT 0 #f))
+(gif-add-loop-control gif 0)
+
+
+(define (save-frame surface)
+  (define image (freeze surface))
+  (define-values (bytes colormap transparent) (image->quantizedbytes image))
+  (gif-add-control gif 'any #f 10 #f)
+  (gif-add-image gif 0 0 WIDTH HEIGHT #f colormap bytes))
+
 (define NUM-OF-LINES 130)
 (define DOTSPEED 2)
 (struct cloth (time surface))
@@ -134,24 +165,28 @@
 (define current-equation heart-formula)
 
 (define (tick c)
-  (define new-time (+ (cloth-time c) {* 0.01 speed-up}))
-  (if (> NUM-OF-LINES (cloth-time c))
-      (cond
-       [(> (floor new-time) (floor (cloth-time c)))
-        (set! speed-up (+ speed-up 1))
-        (cloth
-         new-time
-         (draw-line new-time (cloth-surface c) current-equation #f 0))]
-       [else
-        (cloth new-time (cloth-surface c))])
-      (cloth
-       (+ (cloth-time c) 0.01)
-       (draw-entire (+ 0.01 (- (cloth-time c) NUM-OF-LINES)) current-equation))))
+  (define new-time (+ (cloth-time c) {* 0.06 speed-up}))
+  (begin (save-frame (cloth-surface c))
+         (if (> NUM-OF-LINES (cloth-time c))
+             (cond
+               [(> (floor new-time) (floor (cloth-time c)))
+                (set! speed-up (+ speed-up 1))
+                (cloth
+                 new-time
+                 (draw-line new-time (cloth-surface c) current-equation #f 0))]
+               [else
+                (cloth new-time (cloth-surface c))])
+             (cloth
+              (+ (cloth-time c) 0.06)
+              (draw-entire (+ 0.06 (- (cloth-time c) NUM-OF-LINES)) current-equation)))))
 
 (define (draw c)
   (cloth-surface c))
 
 (big-bang (cloth 0 (rectangle WIDTH HEIGHT "solid" "black"))
-          (on-tick tick (/ 1 60))
-          (to-draw draw)
-          (record? (string->path "C:Users/oflatt/Desktop/heart")))
+          (on-tick tick (/ 1 10))
+          (to-draw draw))
+
+
+(gif-end gif)
+(close-output-port port)
